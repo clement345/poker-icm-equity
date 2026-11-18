@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Poker Preflop Trainer</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f4f6f9;--sidebar:#1a2332;--sidebar-text:#a8b9cc;--accent:#3498db;
+  --border:#dde3ec;--text:#2c3e50;--muted:#7f8c8d;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);display:flex;height:100vh;overflow:hidden}
+
+/* SIDEBAR */
+#sidebar{width:210px;min-width:210px;background:var(--sidebar);overflow-y:auto;display:flex;flex-direction:column}
+#sidebar-logo{padding:18px 16px 14px;color:#fff;font-size:15px;font-weight:700;border-bottom:1px solid #2d3f54}
+.grp{padding:10px 0 2px}
+.grp-title{padding:0 16px 5px;font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:#4a6580;font-weight:600}
+.sc-item{display:block;padding:7px 16px;color:var(--sidebar-text);cursor:pointer;font-size:12.5px;border-left:3px solid transparent;transition:all .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sc-item:hover{background:#243447;color:#fff}
+.sc-item.active{background:#1e3048;color:#fff;border-left-color:var(--accent)}
+
+/* MAIN */
+#main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+#header{background:#fff;border-bottom:1px solid var(--border);padding:0 20px;display:flex;align-items:center;min-height:50px;gap:0}
+#sc-title{font-size:16px;font-weight:600;flex:1;padding-right:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tab-btn{padding:14px 18px;border:none;background:none;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap}
+.tab-btn:hover{color:var(--text)}
+.tab-btn.on{color:var(--accent);border-bottom-color:var(--accent)}
+#content{flex:1;overflow-y:auto;padding:18px 20px}
+
+/* MATRIX */
+#matrix-wrap{overflow-x:auto;margin-bottom:12px}
+#matrix{display:grid;grid-template-columns:repeat(14,42px);grid-template-rows:repeat(14,36px);gap:2px;width:fit-content}
+.cell{width:42px;height:36px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;cursor:default;transition:transform .1s,opacity .1s;user-select:none}
+.cell:hover{transform:scale(1.12);opacity:.88;z-index:10;position:relative}
+.cell.hdr{background:none!important;font-size:11px;color:#5d7a99;cursor:default}
+.cell.hdr:hover{transform:none;opacity:1}
+
+/* LEGEND */
+#legend{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.leg{display:flex;align-items:center;gap:7px;font-size:12.5px;background:#fff;padding:5px 12px;border-radius:20px;border:1px solid var(--border)}
+.leg-dot{width:13px;height:13px;border-radius:3px;flex-shrink:0}
+
+/* EXPLANATION */
+#expl{background:#fff;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:16px}
+#expl summary{padding:13px 16px;cursor:pointer;font-weight:600;font-size:13.5px;list-style:none;display:flex;align-items:center;gap:8px}
+#expl summary::-webkit-details-marker{display:none}
+#expl summary::before{content:'💡'}
+#expl-body{padding:4px 16px 16px;font-size:13px;line-height:1.75;border-top:1px solid var(--border)}
+#expl-body ul{margin:8px 0 0 18px}
+#expl-body li{margin-bottom:3px}
+#expl-body strong{color:var(--accent)}
+#expl-body em{color:var(--muted)}
+#expl-body p{margin-bottom:6px}
+
+/* TRAINING */
+#train{display:none}
+#score-bar{background:#fff;border:1px solid var(--border);border-radius:10px;padding:11px 18px;display:flex;gap:24px;align-items:center;margin-bottom:16px;font-size:12.5px}
+.sc-item2{display:flex;flex-direction:column;gap:1px}
+.sc-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px}
+.sc-val{font-size:20px;font-weight:700}
+.sc-val.g{color:#27ae60}.sc-val.y{color:#f39c12}
+#quiz{background:#fff;border:1px solid var(--border);border-radius:12px;padding:28px;max-width:580px}
+#q-lbl{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:18px}
+#hand{display:flex;gap:12px;justify-content:center;margin-bottom:28px}
+.card{width:70px;height:102px;background:#fff;border:1.5px solid #bbb;border-radius:9px;box-shadow:0 4px 12px rgba(0,0,0,.14),0 1px 3px rgba(0,0,0,.08);display:flex;flex-direction:column;justify-content:space-between;padding:5px 7px;font-family:Georgia,serif}
+.ct{font-size:15px;font-weight:700;line-height:1.1}
+.cm{font-size:26px;text-align:center;line-height:1}
+.cb{font-size:15px;font-weight:700;line-height:1.1;transform:rotate(180deg);align-self:flex-end}
+.red{color:#e74c3c}.black{color:#2c3e50}
+#q-txt{text-align:center;font-size:14px;color:var(--muted);margin-bottom:18px}
+#action-btns{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:18px}
+.ab{padding:10px 20px;border:2px solid transparent;border-radius:8px;font-size:13.5px;font-weight:600;cursor:pointer;transition:all .15s;min-width:118px}
+.ab:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 4px 14px rgba(0,0,0,.15)}
+.ab:disabled{cursor:default;transform:none}
+.ab.ok{border-color:#27ae60!important;box-shadow:0 0 0 3px rgba(39,174,96,.2)!important}
+.ab.bad{border-color:#e74c3c!important;opacity:.55}
+#fb{min-height:44px;text-align:center;font-size:14px;font-weight:500;padding:10px 16px;border-radius:8px;margin-bottom:14px;transition:all .2s}
+#fb.ok{background:#eafaf1;color:#1a7a3e}
+#fb.bad{background:#fdedec;color:#922b21}
+#next{width:100%;padding:12px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s}
+#next:hover{background:#2980b9}
+#next:disabled{background:#95a5a6;cursor:default}
+#kb{text-align:center;margin-top:10px;color:var(--muted);font-size:11px}
+.k{background:#f0f2f5;color:var(--muted);padding:1px 5px;border-radius:3px;font-family:monospace;font-size:11px}
+#filter-row{display:flex;align-items:center;gap:8px;margin-bottom:14px;font-size:13px;color:var(--muted)}
+#filter-row input{cursor:pointer}
+
+/* POKER TABLE */
+#ptable-section{margin-bottom:16px;display:none}
+#ptable-container{position:relative;width:440px;height:220px;margin:0 auto}
+.pt-felt{
+  position:absolute;left:65px;top:25px;width:310px;height:170px;
+  background:radial-gradient(ellipse at center,#1d6a34 0%,#0e3d1c 100%);
+  border:7px solid #8b6914;border-radius:50%;
+  box-shadow:0 4px 18px rgba(0,0,0,.4),inset 0 2px 8px rgba(0,0,0,.35)
+}
+.pt-felt::after{content:'';position:absolute;top:12px;left:12px;right:12px;bottom:12px;border-radius:50%;border:1.5px solid rgba(255,255,255,.09)}
+.pt-seat{
+  position:absolute;width:48px;height:28px;
+  background:#2c3e50;color:#a8b9cc;border-radius:7px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:11.5px;font-weight:700;cursor:pointer;border:2px solid #3d5166;
+  transition:all .2s;user-select:none;letter-spacing:.3px;z-index:2
+}
+.pt-seat:hover{background:#3498db;border-color:#2980b9;color:#fff}
+.pt-seat.pt-active{background:#e67e22;border-color:#d35400;color:#fff;box-shadow:0 0 12px rgba(230,126,34,.65)}
+#pt-lj {left: 16px;top: 96px}
+#pt-hj {left: 69px;top: 22px}
+#pt-co {left:323px;top: 22px}
+#pt-btn{left:376px;top: 96px}
+#pt-sb {left:323px;top:170px}
+#pt-bb {left: 69px;top:170px}
+#ptable-hint{text-align:center;font-size:11px;color:var(--muted);margin-top:5px}
+</style>
+</head>
+<body>
+
+<aside id="sidebar">
+  <div id="sidebar-logo">🃏 Preflop Trainer</div>
+</aside>
+
+<div id="main">
+  <div id="header">
+    <div id="sc-title">—</div>
+    <button class="tab-btn on" onclick="setTab('range')">📊 Range</button>
+    <button class="tab-btn" onclick="setTab('train')">🎯 Training</button>
+  </div>
+  <div id="content">
+
+    <!-- RANGE VIEW -->
+    <div id="range">
+      <div id="ptable-section">
+        <div id="ptable-container">
+          <div class="pt-felt"></div>
+          <div class="pt-seat" id="pt-lj"  onclick="select('lj')">LJ</div>
+          <div class="pt-seat" id="pt-hj"  onclick="select('hj')">HJ</div>
+          <div class="pt-seat" id="pt-co"  onclick="select('co')">CO</div>
+          <div class="pt-seat" id="pt-btn" onclick="select('btn')">BTN</div>
+          <div class="pt-seat" id="pt-sb"  onclick="select('sb')">SB</div>
+          <div class="pt-seat" id="pt-bb"  onclick="select('bb-sb-limp')">BB</div>
+        </div>
+        <div id="ptable-hint">Click a position to see its opening range</div>
+      </div>
+      <div id="matrix-wrap"><div id="matrix"></div></div>
+      <div id="legend"></div>
+      <details id="expl"><summary>Strategy & Explanation</summary><div id="expl-body"></div></details>
+    </div>
+
+    <!-- TRAINING VIEW -->
+    <div id="train">
+      <div id="score-bar">
+        <div class="sc-item2"><span class="sc-lbl">Correct</span><span class="sc-val g" id="s-ok">0</span></div>
+        <div class="sc-item2"><span class="sc-lbl">Total</span><span class="sc-val" id="s-tot">0</span></div>
+        <div class="sc-item2"><span class="sc-lbl">Accuracy</span><span class="sc-val g" id="s-pct">—</span></div>
+        <div class="sc-item2"><span class="sc-lbl">Streak</span><span class="sc-val y" id="s-str">0 🔥</span></div>
+        <button onclick="resetScore()" style="margin-left:auto;padding:5px 12px;border:1px solid var(--border);border-radius:6px;background:#fff;cursor:pointer;font-size:11.5px;color:var(--muted)">Reset</button>
+      </div>
+      <div id="filter-row">
+        <input type="checkbox" id="nonfold-only">
+        <label for="nonfold-only">Only quiz active hands (non-fold)</label>
+      </div>
+      <div id="quiz">
+        <div id="q-lbl"></div>
+        <div id="hand"></div>
+        <div id="q-txt">What is the best action?</div>
+        <div id="action-btns"></div>
+        <div id="fb"></div>
+        <button id="next" onclick="newHand()" disabled>New hand →</button>
+        <div id="kb" style="margin-top:10px">
+          Keys&nbsp;: <span class="k">1</span> <span class="k">2</span> <span class="k">3</span> <span class="k">4</span>
+          &nbsp;·&nbsp; <span class="k">Space</span> = new hand
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ─── DATA ────────────────────────────────────────────────────────────────────
+const RANKS = ['A','K','Q','J','T','9','8','7','6','5','4','3','2'];
+function hn(i,j){
+  if(i===j) return RANKS[i]+RANKS[i];
+  if(i<j)  return RANKS[i]+RANKS[j]+'s';
+  return RANKS[j]+RANKS[i]+'o';
+}
+function s(str){return new Set(str.trim().split(/\s+/))}
+
+const SC = [
+  // ── OPENS ──────────────────────────────────────────────────────────────────
+  { id:'lj', name:'LJ — Open', cat:'Opens', type:'open',
+    act:[
+      {id:'open',  lbl:'Raise',         col:'#27ae60',tc:'#fff', h:s('66 77 88 99 TT JJ QQ KK AA A2s A3s A4s A5s A6s A7s A8s A9s ATs AJs AQs AKs ATo AJo AQo AKo KJo KQo K8s K9s KTs KJs KQs Q8s Q9s QTs QJs J8s J9s JTs T7s T8s T9s 96s 97s 98s 85s 86s 87s 74s 75s 76s 63s 64s 65s 52s 53s 54s 42s 43s 32s')},
+      {id:'loose', lbl:'Raise (loose)', col:'#e67e22',tc:'#fff', h:s('K7s Q7s J7s T6s 95s 84s 73s')},
+      {id:'tight', lbl:'Raise (tight)', col:'#f1c40f',tc:'#333', h:s('22 33 44 55')},
+      {id:'fold',  lbl:'Fold',          col:'#dce1e7',tc:'#8395a7',h:new Set()},
+    ],
+    xp:`<p><strong>LJ Open — 5 players left to act. Fold 73.7%, open 26.3%.</strong></p>
+    <ul><li><strong>Raise (22.6%):</strong> 66+, all suited aces A2s+, ATo+, KJo+, K8s+, Q8s+, J8s+, connectors T7s+ down to 32s.</li>
+    <li><strong>Raise loose (2%):</strong> K7s, Q7s, J7s, T6s, 95s, 84s, 73s — marginal suited one-gappers.</li>
+    <li><strong>Raise tight (1.7%):</strong> 22-55 — small pairs, mixed (limited implied odds at 50bb).</li></ul>`
+  },
+  { id:'hj', name:'HJ — Open', cat:'Opens', type:'open',
+    act:[
+      {id:'open',  lbl:'Raise',         col:'#27ae60',tc:'#fff', h:s('55 66 77 88 99 TT JJ QQ KK AA A2s A3s A4s A5s A6s A7s A8s A9s ATs AJs AQs AKs A9o ATo AJo AQo AKo KTo KJo KQo QJo K7s K8s K9s KTs KJs KQs Q7s Q8s Q9s QTs QJs J7s J8s J9s JTs T6s T7s T8s T9s 95s 96s 97s 98s 84s 85s 86s 87s 73s 74s 75s 76s 62s 63s 64s 65s 52s 53s 54s 42s 43s 32s')},
+      {id:'loose', lbl:'Raise (loose)', col:'#e67e22',tc:'#fff', h:s('K4s K5s K6s Q5s Q6s J5s J6s T5s 94s 83s 72s 61s')},
+      {id:'tight', lbl:'Raise (tight)', col:'#f1c40f',tc:'#333', h:s('22 33 44')},
+      {id:'fold',  lbl:'Fold',          col:'#dce1e7',tc:'#8395a7',h:new Set()},
+    ],
+    xp:`<p><strong>HJ Open — 4 players left to act. Fold 65.8%, open 34.2%.</strong></p>
+    <ul><li><strong>Raise (28.2%):</strong> 55+, A2s-AKs, A9o+, KTo+, QJo, K7s+, Q7s+, J7s+, T6s+, 95s+, 84s+, 73s+, 62s+, down to 32s.</li>
+    <li><strong>Raise loose (3.6%):</strong> K4s-K6s, Q5s-Q6s, J5s-J6s, T5s, 94s, 83s, 72s, 61s — marginal suited hands.</li>
+    <li><strong>Raise tight (1.4%):</strong> 22-44 — very small pairs, mixed at low frequency.</li></ul>`
+  },
+  { id:'co', name:'CO — Open', cat:'Opens', type:'open',
+    act:[
+      {id:'open',  lbl:'Raise',         col:'#27ae60',tc:'#fff', h:s('33 44 55 66 77 88 99 TT JJ QQ KK AA A2s A3s A4s A5s A6s A7s A8s A9s ATs AJs AQs AKs A6o A7o A8o A9o ATo AJo AQo AKo K8o K9o KTo KJo KQo QTo QJo JTo K2s K3s K4s K5s K6s K7s K8s K9s KTs KJs KQs Q5s Q6s Q7s Q8s Q9s QTs QJs J5s J6s J7s J8s J9s JTs T5s T6s T7s T8s T9s 94s 95s 96s 97s 98s 83s 84s 85s 86s 87s 72s 73s 74s 75s 76s 61s 62s 63s 64s 65s 52s 53s 54s 42s 43s 32s')},
+      {id:'loose', lbl:'Raise (loose)', col:'#e67e22',tc:'#fff', h:s('A5o K7o Q9o')},
+      {id:'tight', lbl:'Raise (tight)', col:'#f1c40f',tc:'#333', h:s('22 J4s T4s')},
+      {id:'fold',  lbl:'Fold',          col:'#dce1e7',tc:'#8395a7',h:new Set()},
+    ],
+    xp:`<p><strong>CO Open — 3 players left to act. Fold 56.7%, open 43.3%.</strong></p>
+    <ul><li><strong>Raise (40%):</strong> 33+, A2s-AKs, A6o+, K8o+, QTo+, JTo, K2s-KQs (all), Q5s+, J5s+, T5s+, 94s+, 83s+, 72s+, 61s+.</li>
+    <li><strong>Raise loose (2%):</strong> A5o, K7o, Q9o — marginal offsuit hands with blockers.</li>
+    <li><strong>Raise tight (1.1%):</strong> 22, J4s, T4s — very rarely opened.</li></ul>`
+  },
+  { id:'btn', name:'BTN — Open', cat:'Opens', type:'open',
+    act:[
+      {id:'open',  lbl:'Raise',         col:'#27ae60',tc:'#fff', h:s('22 33 44 55 66 77 88 99 TT JJ QQ KK AA A2s A3s A4s A5s A6s A7s A8s A9s ATs AJs AQs AKs K2s K3s K4s K5s K6s K7s K8s K9s KTs KJs KQs Q2s Q3s Q4s Q5s Q6s Q7s Q8s Q9s QTs QJs J2s J3s J4s J5s J6s J7s J8s J9s JTs T3s T4s T5s T6s T7s T8s T9s 95s 96s 97s 98s 85s 86s 87s 74s 75s 76s 64s 65s 54s 43s A2o A3o A4o A5o A6o A7o A8o A9o ATo AJo AQo AKo K5o K6o K7o K8o K9o KTo KJo KQo Q7o Q8o Q9o QTo QJo J8o J9o JTo T8o T9o')},
+      {id:'loose', lbl:'Raise (loose)', col:'#e67e22',tc:'#fff', h:s('K4o Q6o J7o T7o T2s 32s')},
+      {id:'tight', lbl:'Raise (tight)', col:'#f1c40f',tc:'#333', h:s('Q4o Q5o')},
+      {id:'fold',  lbl:'Fold',          col:'#dce1e7',tc:'#8395a7',h:new Set()},
+    ],
+    xp:`<p><strong>BTN Open — 2 players left to act. Fold 41.6%, open 58.4%.</strong></p>
+    <ul><li><strong>Raise (52%):</strong> All pairs, K2s-KQs, Q2s-QJs, J2s-JTs, T3s-T9s, suited broadways and connectors, A2o-AKo, K5o+, Q7o+, J8o+, T8o+.</li>
+    <li><strong>Raise loose (4%):</strong> K4o, Q6o, J7o, T7o, T2s, 32s — marginal hands IP.</li>
+    <li><strong>Raise tight (1.8%):</strong> Q4o, Q5o — very rarely opened even on the BTN.</li></ul>`
+  },
+  { id:'sb', name:'SB — Open/Limp', cat:'Opens', type:'sb',
+    act:[
+      {id:'value', lbl:'Raise value', col:'#145a32',tc:'#fff',    h:s('88 99 TT JJ QQ KK AA ATs AJs AQs AKs KJs KQs AJo AQo AKo KJo KQo')},
+      {id:'bluff', lbl:'Raise bluff',  col:'#82e0aa',tc:'#145a32', h:s('A2s A3s A4s A5s A6s A7s A8s A9s ATo KTo A2o A3o A4o A5o K7o K8o K9o QTo JTo T9o')},
+      {id:'limp',  lbl:'Limp',         col:'#2471a3',tc:'#fff',    h:s('22 33 44 55 66 77 K2s K3s K4s K5s K6s K7s K8s K9s KTs Q2s Q3s Q4s Q5s Q6s Q7s Q8s Q9s QTs QJs J4s J5s J6s J7s J8s J9s JTs T6s T7s T8s T9s 96s 97s 98s 85s 86s 87s 75s 76s 64s 65s 53s 54s 43s 32s A6o A7o A8o A9o K5o K6o Q9o QJo J9o')},
+      {id:'fold',  lbl:'Fold',         col:'#dce1e7',tc:'#8395a7', h:new Set()},
+    ],
+    xp:`<p><strong>The most complex position — 3 actions (Raise ~23%, Limp ~51%, Fold ~26%).</strong> SB is OOP against BB.</p>
+    <ul><li><strong>Raise value (dark green ~9%):</strong> 88+, ATs+, KJs+, strong broadways AJo+, KJo+. These want a big heads-up pot vs a wide BB.</li>
+    <li><strong>Raise bluff (light green ~14%):</strong> Suited aces A2s-A9s (nut flush blocker + clean fold OOP), ATo/KTo + A2o-A5o + K7o-K9o offsuit (clean fold to a 3-bet).</li>
+    <li><strong>Limp (blue ~51%):</strong> Pairs 22-77, suited kings/queens/jacks, suited connectors. These hands prefer a cheap flop — they lose value if 3-bet OOP.</li>
+    <li><strong>Fold (~26%):</strong> Disconnected offsuit trash without blockers.</li></ul>
+    <p><em>Key: the suited aces A2s-A9s are RAISE BLUFFS (not limps) — the A blocker allows a clean fold to a 3-bet.</em></p>`
+  },
+
+  { id:'bb-sb-limp', name:'BB vs Limp SB ⚡IP', cat:'Opens', type:'bb-limp',
+    act:[
+      {id:'raise', lbl:'Raise ISO',  col:'#27ae60',tc:'#fff', h:s('22 33 44 55 66 77 88 99 TT JJ QQ KK AA A2s A3s A4s A5s A6s A7s A8s A9s ATs AJs AQs AKs A2o A3o A4o A5o A6o A7o A8o A9o ATo AJo AQo AKo K7s K8s K9s KTs KJs KQs K7o K8o K9o KTo KJo KQo Q8s Q9s QTs QJs Q8o Q9o QTo QJo JTs J9s J9o JTo T8s T9s T8o T9o 97s 98s 86s 87s 75s 76s 65s 54s')},
+      {id:'fold',  lbl:'Check',      col:'#2471a3',tc:'#fff', h:new Set()},
+    ],
+    xp:`<p><strong>⚡ BB vs SB Limp — BB is IP! Fold 0%, Raise 39.6%, Check 60.4%.</strong></p>
+    <ul><li><strong>BB never folds</strong> — already has 1BB invested and is IP against SB.</li>
+    <li><strong>Raise ISO (39.6% ≈ 526 combos):</strong> All pairs, all suited aces, all offsuit aces (A2o-AKo), K7s+/K7o+, Q8s+/Q8o+, JTs/J9s, T8s-T9s, suited connectors. BB attacks SB's capped range with a wide range.</li>
+    <li><strong>Check (60.4%):</strong> Hands too weak to ISO raise — low suited non-connectors, offsuit trash.</li>
+    <li><strong>Why so wide?</strong> SB's limp range is capped (its strong hands would have raised). BB with permanent position → raising generates fold equity + builds the pot with an equity advantage.</li></ul>
+    <p><em>Reminder: SB acts FIRST post-flop → BB has position for the rest of the hand.</em></p>`
+  },
+
+  // ── BTN DEFENSE ─────────────────────────────────────────────────────────────
+  { id:'btn-lj', name:'BTN vs LJ', cat:'BTN Defense IP', type:'def', opener:'LJ (~20%)',
+    act:[
+      {id:'vbet', lbl:'3-bet value', col:'#922b21',tc:'#fff', h:s('QQ KK AA AQs AKs AKo')},
+      {id:'bluff',lbl:'3-bet bluff',  col:'#e67e22',tc:'#fff', h:s('A2s A3s A4s A5s KQo')},
+      {id:'call', lbl:'Call',         col:'#1e8449',tc:'#fff', h:s('JJ TT 99 88 77 66 55 44 33 22 AJs ATs A9s A8s AQo AJo KQs KJs KTs K9s QJs QTs Q9s JTs J9s T9s 98s 87s 76s 65s 54s')},
+      {id:'fold', lbl:'Fold',         col:'#dce1e7',tc:'#8395a7',h:new Set()},
+    ],
+    xp:`<p><strong>BTN vs LJ — IP, tight LJ range (~20%).</strong></p>
+    <ul><li><strong>Tight 3-bet for value:</strong> QQ+, AQs+, AKo — LJ has a strong range.</li>
+    <li><strong>JJ is a call</strong> (not a 3-bet) — too risky vs LJ's tight range.</li>
+    <li><strong>Very wide call:</strong> IP → all pairs 22+, suited broadways, connectors.</li>
+    <li><strong>Bluffs:</strong> A2s-A5s (nut flush blocker) + KQo (King blocker).</li></ul>`
+  },
+  { id:'btn-hj', name:'BTN vs HJ', cat:'BTN Defense IP', type:'def', opener:'HJ (~26%)',
+    act:[
+      {id:'vbet', lbl:'3-bet value', col:'#922b21',tc:'#fff', h:s('JJ QQ KK AA AJs AQs AKs AKo AQo')},
+      {id:'bluff',lbl:'3-bet bluff',  col:'#e67e22',tc:'#fff', h:s('A2s A3s A4s A5s KQo K4s K3s')},
+      {id:'call', lbl:'Call',         col:'#1e8449',tc:'#fff', h:s('TT 99 88 77 66 55 44 33 22 ATs A9s A8s A7s AJo ATo KQs KJs KTs K9s K8s QJs QTs Q9s Q8s JTs J9s J8s T9s T8s 98s 87s 76s 65s 54s 43s')},
+      {id:'fold', lbl:'Fold',         col:'#dce1e7',tc:'#8395a7',h:new Set()},
+    ],
+    xp:`<p><strong>BTN vs HJ — IP, HJ range ~26%.</strong></p>
+    <ul><li><strong>JJ moves to a 3-bet for value</strong> — HJ opens wider, JJ is ahead of its range.</li>
+    <li><strong>AJs</strong> added for value. <strong>K3s-K4s</strong> added as bluffs.</li>
+    <li><strong>Call:</strong> Q8s, J8s, T8s added vs the LJ version.</li></ul>`
+  },
+  { id:'btn-co', name:'BTN vs CO', cat:'BTN Defense IP', type:'def', opener:'CO (~31%)',
+    act:[
+      {id:'vbet', lbl:'3-bet value', col:'#922b21',tc:'#fff', h:s('TT JJ QQ KK AA AJs AQs AKs KQs AKo AQo AJo')},
+      {id:'bluff',lbl:'3-bet bluff',  col:'#e67e22',tc:'#fff', h:s('A2s A3s A4s A5s KQo K3s K2s 76s 65s')},
+      {id:'call', lbl:'Call',         col:'#1e8449',tc:'#fff', h:s('99 88 77 66 55 44 33 22 ATs A9s A8s A7s A6s ATo KJs KTs K9s K8s K7s QJs QTs Q9s Q8s JTs J9s J8s J7s T9s T8s T7s 98s 97s 87s 86s 75s 64s 54s 53s 43s')},
+      {id:'fold', lbl:'Fold',         col:'#dce1e7',tc:'#8395a7',h:new Set()},
+    ],
+    xp:`<p><strong>BTN vs CO — IP, wide CO range (~31%).</strong></p>
+    <ul><li><strong>TT moves to a 3-bet for value</strong> — CO opens wide, TT is ahead.</li>
+    <li><strong>KQs + AJo</strong> added for value.</li>
+    <li><strong>76s/65s as semi-bluffs</strong> — high FE vs CO's wide range.</li>
+    <li><strong>Very wide calling range</strong> — all pairs 22-99, broad suited range.</li></ul>`
+  },
+
+  // ── SB DEFENSE ──────────────────────────────────────────────────────────────
+  { id:'sb-lj', name:'SB vs LJ', cat:'SB Defense OOP', type:'def', opener:'LJ (~20%)',
+    act:[
+      {id:'vbet', lbl:'3-bet value', col:'#922b21',tc:'#fff', h:s('QQ KK AA AQs AKs AKo')},
+      {id:'bluff',lbl:'3-bet bluff',  col:'#e67e22',tc:'#fff', h:s('A2s A3s A4s A5s KQo')},
+      {id:'call', lbl:'Call',         col:'#1e8449',tc:'#fff', h:s('JJ TT 99 AJs ATs KQs KJs QJs JTs T9s 98s 87s')},
+      {id:'fold', lbl:'Fold',         col:'#dce1e7',tc:'#8395a7',h:new Set()},
+    ],
+    xp:`<p><strong>SB vs LJ — OOP, tight LJ range (~20%).</strong></p>
+    <ul><li><strong>Very conservative 3-bet.</strong> LJ has a strong range → few bluffs.</li>
+    <li><strong>Very narrow call:</strong> being OOP is costly. Only hands that realize their equity well.</li>
+    <li><strong>JJ is a call</strong> — too risky to 3-bet vs LJ's tight range.</li>
+    <li><strong>Massive fold:</strong> Hands that BTN called IP are folds OOP.</li></ul>`
+  },
+  { id:'sb-hj', name:'SB vs HJ', cat:'SB Defense OOP', type:'def', opener:'HJ (~26%)',
+    act:[
+      {id:'vbet', lbl:'3-bet value', col:'#922b21',tc:'#fff', h:s('JJ QQ KK AA AJs AQs AKs AKo AQo')},
+      {id:'bluff',lbl:'3-bet bluff',  col:'#e67e22',tc:'#fff', h:s('A2s A3s A4s A5s KQo K4s')},
+      {id:'call', lbl:'Call',         col:'#1e8449',tc:'#fff', h:s('TT 99 88 ATs AJo KQs KJs QJs JTs T9s')},
+      {id:'fold', lbl:'Fold',         col:'#dce1e7',tc:'#8395a7',h:new Set()},
+    ],
+    xp:`<p><strong>SB vs HJ — OOP, HJ range ~26%.</strong></p>
+    <ul><li><strong>JJ and AJs</strong> move to a 3-bet for value (vs LJ we called them).</li>
+    <li><strong>88 and AJo are calls</strong> — HJ's wider range justifies a call.</li>
+    <li><strong>K4s</strong> added as a bluff.</li></ul>`
+  },
+  { id:'sb-co', name:'SB vs CO', cat:'SB Defense OOP', type:'def', opener:'CO (~31%)',
+    act:[
+      {id:'vbet', lbl:'3-bet value', col:'#922b21',tc:'#fff', h:s('JJ QQ KK AA AJs AQs AKs KQs AKo AQo AJo')},
+      {id:'bluff',lbl:'3-bet bluff',  col:'#e67e22',tc:'#fff', h:s('A2s A3s A4s A5s K3s K4s KQo 76s')},
+      {id:'call', lbl:'Call',         col:'#1e8449',tc:'#fff', h:s('TT 99 88 77 ATs A9s KJs KTs QJs JTs T9s 98s')},
+      {id:'fold', lbl:'Fold',         col:'#dce1e7',tc:'#8395a7',h:new Set()},
+    ],
+    xp:`<p><strong>SB vs CO — OOP, wide CO range (~31%).</strong></p>
+    <ul><li><strong>KQs + AJo</strong> move to value. <strong>76s</strong> as a semi-bluff.</li>
+    <li><strong>77 is a call</strong> — CO's wide range justifies defending small pairs.</li>
+    <li><strong>A9s and 98s</strong> added to the calling range.</li></ul>`
+  },
+  { id:'sb-btn', name:'SB vs BTN', cat:'SB Defense OOP', type:'def', opener:'BTN (~48%)',
+    act:[
+      {id:'vbet', lbl:'3-bet value', col:'#922b21',tc:'#fff', h:s('TT JJ QQ KK AA AJs AQs AKs KQs AKo AQo')},
+      {id:'bluff',lbl:'3-bet bluff',  col:'#e67e22',tc:'#fff', h:s('A2s A3s A4s A5s K2s K3s KQo 76s 65s')},
+      {id:'call', lbl:'Call',         col:'#1e8449',tc:'#fff', h:s('99 88 77 66 ATs A9s AJo KJs KTs QJs QTs JTs T9s 98s 87s')},
+      {id:'fold', lbl:'Fold',         col:'#dce1e7',tc:'#8395a7',h:new Set()},
+    ],
+    xp:`<p><strong>SB vs BTN — OOP, BTN steals very wide (~48%).</strong></p>
+    <ul><li><strong>TT moves to a 3-bet for value</strong> — BTN's range is very wide, TT is clearly ahead.</li>
+    <li><strong>Widest bluffing range:</strong> K2s-K3s, 65s added. Maximum FE vs BTN.</li>
+    <li><strong>66 and QTs are calls</strong> — BTN's range justifies a wider defense.</li>
+    <li>Despite BTN's very wide range, being OOP forces us to stay conservative with calls.</li></ul>`
+  },
+
+  // ── BB DEFENSE ──────────────────────────────────────────────────────────────
+  { id:'bb-lj', name:'BB vs LJ', cat:'BB Defense OOP', type:'def', opener:'LJ (~20%)',
+    act:[
+      {id:'vbet', lbl:'3-bet value', col:'#922b21',tc:'#fff', h:s('QQ KK AA AQs AKs AKo')},
+      {id:'bluff',lbl:'3-bet bluff',  col:'#e67e22',tc:'#fff', h:s('A2s A3s A4s A5s K5s KQo')},
+      {id:'call', lbl:'Call',         col:'#1e8449',tc:'#fff', h:s('JJ TT 99 88 77 66 55 44 33 22 AJs ATs A9s A8s A7s A6s AQo AJo ATo KQs KJs KTs K9s K8s KQo KJo QJs QTs Q9s JTs J9s QJo T9s T8s 98s 97s 87s 86s 76s 75s 65s 64s 54s 53s 43s')},
+      {id:'fold', lbl:'Fold',         col:'#dce1e7',tc:'#8395a7',h:new Set()},
+    ],
+    xp:`<p><strong>BB vs LJ — OOP, but 1BB already invested → better pot odds.</strong></p>
+    <ul><li><strong>Tight 3-bet</strong> like SB — LJ has a strong range.</li>
+    <li><strong>Calls much wider than SB</strong> thanks to pot odds: pairs 22+, wide suited hands, reasonable offsuit hands.</li>
+    <li><strong>JJ is a call</strong> (vs tight LJ, 3-betting is too risky).</li></ul>`
+  },
+  { id:'bb-hj', name:'BB vs HJ', cat:'BB Defense OOP', type:'def', opener:'HJ (~26%)',
+    act:[
+      {id:'vbet', lbl:'3-bet value', col:'#922b21',tc:'#fff', h:s('JJ QQ KK AA AQs AKs AKo AQo')},
+      {id:'bluff',lbl:'3-bet bluff',  col:'#e67e22',tc:'#fff', h:s('A2s A3s A4s A5s K4s K5s KQo')},
+      {id:'call', lbl:'Call',         col:'#1e8449',tc:'#fff', h:s('TT 99 88 77 66 55 44 33 22 AJs ATs A9s A8s A7s A6s AJo ATo A9o KQs KJs KTs K9s K8s K7s K6s KJo KTo QJs QTs Q9s Q8s QJo QTo JTs J9s J8s JTo T9s T8s 98s 97s 87s 86s 76s 75s 65s 64s 54s 53s 43s')},
+      {id:'fold', lbl:'Fold',         col:'#dce1e7',tc:'#8395a7',h:new Set()},
+    ],
+    xp:`<p><strong>BB vs HJ — pot odds, HJ range ~26%.</strong></p>
+    <ul><li><strong>JJ + AQo</strong> move to a 3-bet for value.</li>
+    <li><strong>Even wider calling range:</strong> A9o, K6s-K7s, QTo added.</li></ul>`
+  },
+  { id:'bb-co', name:'BB vs CO', cat:'BB Defense OOP', type:'def', opener:'CO (~31%)',
+    act:[
+      {id:'vbet', lbl:'3-bet value', col:'#922b21',tc:'#fff', h:s('JJ QQ KK AA AJs AQs AKs AKo AQo AJo')},
+      {id:'bluff',lbl:'3-bet bluff',  col:'#e67e22',tc:'#fff', h:s('A2s A3s A4s A5s K3s K4s KQo 76s 65s')},
+      {id:'call', lbl:'Call',         col:'#1e8449',tc:'#fff', h:s('TT 99 88 77 66 55 44 33 22 ATs A9s A8s A7s A6s ATo A9o A8o KQs KJs KTs K9s K8s K7s K6s KJo KTo K9o QJs QTs Q9s Q8s QJo QTo JTs J9s J8s J7s JTo J9o T9s T8s T7s T9o 98s 97s 96s 87s 86s 85s 75s 74s 64s 63s 54s 53s 43s 32s')},
+      {id:'fold', lbl:'Fold',         col:'#dce1e7',tc:'#8395a7',h:new Set()},
+    ],
+    xp:`<p><strong>BB vs CO — wide CO range (~31%), massive BB call.</strong></p>
+    <ul><li><strong>AJo moves to value</strong> — CO opens a lot of weak hands.</li>
+    <li><strong>76s/65s as semi-bluffs.</strong></li>
+    <li><strong>Massive calling range:</strong> Down to K6s, Q8s, J7s, T7s, 96s… BB defends ~55-60%.</li></ul>`
+  },
+  { id:'bb-btn', name:'BB vs BTN', cat:'BB Defense OOP', type:'def', opener:'BTN (~48%)',
+    act:[
+      {id:'vbet', lbl:'3-bet value', col:'#922b21',tc:'#fff', h:s('TT JJ QQ KK AA AQs AKs KQs AKo AQo')},
+      {id:'bluff',lbl:'3-bet bluff',  col:'#e67e22',tc:'#fff', h:s('A2s A3s A4s A5s K2s K3s K4s KQo 76s 65s 54s')},
+      {id:'call', lbl:'Call',         col:'#1e8449',tc:'#fff', h:s('99 88 77 66 55 44 33 22 AJs ATs A9s A8s A7s A6s AJo ATo A9o A8o A7o KJs KTs K9s K8s K7s K6s K5s KJo KTo K9o K8o QJs QTs Q9s Q8s Q7s QJo QTo Q9o JTs J9s J8s J7s J6s JTo J9o T9s T8s T7s T6s T9o 98s 97s 96s 87s 86s 85s 75s 74s 64s 63s 53s 52s 43s 42s 32s')},
+      {id:'fold', lbl:'Fold',         col:'#dce1e7',tc:'#8395a7',h:new Set()},
+    ],
+    xp:`<p><strong>BB vs BTN — BTN steals very wide (~48%), BB defends massively.</strong></p>
+    <ul><li><strong>TT moves to value. 54s as a semi-bluff</strong> (maximum FE).</li>
+    <li><strong>Extremely wide call:</strong> ~65% of hands. Q7s, J6s, T6s, 96s…</li>
+    <li>Fold only absolute trash: 72o-75o, 62o-65o, J2o-J4o, T2o-T7o…</li></ul>`
+  },
+  { id:'bb-sb', name:'BB vs SB ⚡IP', cat:'BB Defense OOP', type:'def', opener:'SB (~18% polarized)',
+    act:[
+      {id:'vbet', lbl:'3-bet value', col:'#922b21',tc:'#fff', h:s('QQ KK AA AQs AKs AKo AQo')},
+      {id:'bluff',lbl:'3-bet bluff',  col:'#e67e22',tc:'#fff', h:s('A2s A3s A4s A5s')},
+      {id:'call', lbl:'Call',         col:'#1e8449',tc:'#fff', h:s('JJ TT 99 88 77 66 55 44 33 22 AJs ATs A9s A8s A7s A6s AJo ATo A9o A8o A7o A6o A5o A4o A3o A2o KQs KJs KTs K9s K8s K7s K6s K5s K4s K3s K2s KQo KJo KTo K9o K8o K7o QJs QTs Q9s Q8s Q7s Q6s Q5s Q4s QJo QTo Q9o Q8o JTs J9s J8s J7s J6s J5s JTo J9o J8o T9s T8s T7s T6s T5s T9o T8o 98s 97s 96s 95s 87s 86s 85s 84s 76s 75s 74s 65s 64s 63s 54s 53s 52s 43s 42s 32s 98o 87o')},
+      {id:'fold', lbl:'Fold',         col:'#dce1e7',tc:'#8395a7',h:new Set()},
+    ],
+    xp:`<p><strong>⚡ Exception: BB is IP against SB!</strong> SB acts first post-flop.</p>
+    <ul><li><strong>SB raising range ~18%, polarized</strong> — strong value + offsuit bluffs with no showdown value.</li>
+    <li><strong>BB calls almost everything</strong> — IP + pot odds = fold only ~15% (absolute trash).</li>
+    <li><strong>JJ is a call</strong> — IP lets us realize equity without bloating the pot.</li>
+    <li><strong>A2o-AJo are calls</strong> — they dominate SB's bluffs and realize well IP.</li>
+    <li><strong>K2s-KQs are all calls</strong> — maximum playability with position.</li>
+    <li>Fold: 72o-76o, 62o-65o, 52o-54o, 42o-43o, J2o-J4o, T2o-T7o, 82o-87o, 92o-96o…</li></ul>`
+  },
+
+  // ── HJ DEFENSE IP ───────────────────────────────────────────────────────────
+  { id:'hj-lj', name:'HJ vs LJ', cat:'HJ Defense IP', type:'def', opener:'LJ (~20%)',
+    act:[
+      {id:'vbet', lbl:'3-bet value', col:'#922b21',tc:'#fff', h:s('QQ KK AA AQs AKs AKo')},
+      {id:'bluff',lbl:'3-bet bluff',  col:'#e67e22',tc:'#fff', h:s('A2s A3s A4s A5s KQo')},
+      {id:'call', lbl:'Call',         col:'#1e8449',tc:'#fff', h:s('JJ TT 99 88 77 66 55 AJs ATs A9s KQs KJs KTs QJs QTs JTs T9s 98s 87s 76s AQo AJo ATo')},
+      {id:'fold', lbl:'Fold',         col:'#dce1e7',tc:'#8395a7',h:new Set()},
+    ],
+    xp:`<p><strong>HJ vs LJ — IP post-flop against LJ.</strong></p>
+    <ul><li><strong>Tight 3-bet:</strong> QQ+, AQs+, AKo — LJ has a very tight range (~20%).</li>
+    <li><strong>Wide call IP:</strong> pairs 55+, suited broadways, connectors down to 76s.</li>
+    <li><strong>Bluffs:</strong> A2s-A5s (blockers) + KQo.</li>
+    <li>Position compensates: we call wider than if we were OOP.</li></ul>`
+  },
+
+  // ── CO DEFENSE IP ───────────────────────────────────────────────────────────
+  { id:'co-lj', name:'CO vs LJ', cat:'CO Defense IP', type:'def', opener:'LJ (~20%)',
+    act:[
+      {id:'vbet', lbl:'3-bet value', col:'#922b21',tc:'#fff', h:s('QQ KK AA AQs AKs AKo')},
+      {id:'bluff',lbl:'3-bet bluff',  col:'#e67e22',tc:'#fff', h:s('A2s A3s A4s A5s KQo K4s')},
+      {id:'call', lbl:'Call',         col:'#1e8449',tc:'#fff', h:s('JJ TT 99 88 77 66 55 44 AJs ATs A9s A8s KQs KJs KTs K9s QJs QTs Q9s JTs J9s T9s 98s 87s 76s 65s AQo AJo ATo')},
+      {id:'fold', lbl:'Fold',         col:'#dce1e7',tc:'#8395a7',h:new Set()},
+    ],
+    xp:`<p><strong>CO vs LJ — IP post-flop, tight LJ range (~20%).</strong></p>
+    <ul><li><strong>3-bet for value</strong> identical to HJ vs LJ.</li>
+    <li><strong>Even wider call:</strong> 44+ pairs, K4s as a bluff, 65s/J9s added.</li>
+    <li>CO has BTN/SB/BB behind, but position IP vs LJ justifies a wide defense.</li></ul>`
+  },
+  { id:'co-hj', name:'CO vs HJ', cat:'CO Defense IP', type:'def', opener:'HJ (~26%)',
+    act:[
+      {id:'vbet', lbl:'3-bet value', col:'#922b21',tc:'#fff', h:s('JJ QQ KK AA AJs AQs AKs AKo AQo')},
+      {id:'bluff',lbl:'3-bet bluff',  col:'#e67e22',tc:'#fff', h:s('A2s A3s A4s A5s KQo K3s K4s')},
+      {id:'call', lbl:'Call',         col:'#1e8449',tc:'#fff', h:s('TT 99 88 77 66 55 ATs A9s A8s KQs KJs KTs K9s QJs QTs Q9s JTs J9s T9s 98s 87s 76s 65s AJo ATo')},
+      {id:'fold', lbl:'Fold',         col:'#dce1e7',tc:'#8395a7',h:new Set()},
+    ],
+    xp:`<p><strong>CO vs HJ — IP, wider HJ range (~26%).</strong></p>
+    <ul><li><strong>JJ + AJs + AQo</strong> move to a 3-bet for value (HJ opens wider → these hands are ahead).</li>
+    <li><strong>K3s-K4s</strong> as bluffs (extra King blockers).</li>
+    <li><strong>Call:</strong> TT-55, ATs-A8s, K9s+, Q9s+, J9s+, connectors.</li></ul>`
+  },
+
+  // ── FACING A 3-BET — OOP ────────────────────────────────────────────────────
+  { id:'vs3-lj', name:'LJ vs 3-bet', cat:'Facing a 3-bet — OOP', type:'def', opener:'3-bet from HJ/CO/BTN',
+    act:[
+      {id:'vbet', lbl:'4-bet value', col:'#922b21',tc:'#fff', h:s('QQ KK AA AKs AKo')},
+      {id:'bluff',lbl:'4-bet bluff',  col:'#e67e22',tc:'#fff', h:s('A5s A4s')},
+      {id:'call', lbl:'Call',         col:'#1e8449',tc:'#fff', h:s('JJ TT 99 AQs AJs KQs')},
+      {id:'fold', lbl:'Fold',         col:'#dce1e7',tc:'#8395a7',h:new Set()},
+    ],
+    xp:`<p><strong>LJ opened (~20%), faces a 3-bet OOP.</strong></p>
+    <ul><li><strong>Very tight 4-bet for value:</strong> QQ+, AKs, AKo — OOP in a big pot, we want only the best hands.</li>
+    <li><strong>4-bet bluff:</strong> A5s, A4s only (Ace blocker + clean fold to a 5-bet).</li>
+    <li><strong>Narrow call OOP:</strong> JJ, TT, 99, AQs, AJs, KQs — playable hands that hold up well.</li>
+    <li><strong>Massive fold:</strong> 88 and below, ATs, KJs, QJs, connectors, AJo, AQo, KQo.</li></ul>
+    <p><em>⚡ VS 3-bet from SB/BB (IP): widen the call to 88, ATs, AQo, KJs, JTs.</em></p>`
+  },
+  { id:'vs3-hj', name:'HJ vs 3-bet', cat:'Facing a 3-bet — OOP', type:'def', opener:'3-bet from CO/BTN',
+    act:[
+      {id:'vbet', lbl:'4-bet value', col:'#922b21',tc:'#fff', h:s('QQ KK AA AKs AKo')},
+      {id:'bluff',lbl:'4-bet bluff',  col:'#e67e22',tc:'#fff', h:s('A5s A4s')},
+      {id:'call', lbl:'Call',         col:'#1e8449',tc:'#fff', h:s('JJ TT 99 88 AQs AJs ATs KQs')},
+      {id:'fold', lbl:'Fold',         col:'#dce1e7',tc:'#8395a7',h:new Set()},
+    ],
+    xp:`<p><strong>HJ opened (~26%), faces a 3-bet OOP (CO/BTN).</strong></p>
+    <ul><li><strong>88 is a call</strong> (vs LJ we folded 88) — HJ opened wider so 88 has more relative equity in the pot.</li>
+    <li><strong>ATs is a call</strong> — HJ opens ATs, and it can continue vs 3-bettors who have wide ranges.</li>
+    <li><strong>Fold:</strong> 77 and below, A9s and below, KJs and below, QJs, connectors, AJo, AQo, KQo.</li></ul>
+    <p><em>⚡ VS 3-bet from SB/BB (IP): widen the call to 77, A9s, AJo, KJs, JTs.</em></p>`
+  },
+  { id:'vs3-co-oop', name:'CO vs 3-bet OOP', cat:'Facing a 3-bet — OOP', type:'def', opener:'3-bet from BTN',
+    act:[
+      {id:'vbet', lbl:'4-bet value', col:'#922b21',tc:'#fff', h:s('QQ KK AA AQs AKs AKo')},
+      {id:'bluff',lbl:'4-bet bluff',  col:'#e67e22',tc:'#fff', h:s('A5s A4s A3s')},
+      {id:'call', lbl:'Call',         col:'#1e8449',tc:'#fff', h:s('JJ TT 99 AJs ATs KQs JTs')},
+      {id:'fold', lbl:'Fold',         col:'#dce1e7',tc:'#8395a7',h:new Set()},
+    ],
+    xp:`<p><strong>CO opened (~31%), BTN 3-bet. CO is OOP.</strong></p>
+    <ul><li><strong>AQs moves to a 4-bet for value</strong> — CO opens wide so AQs is strong vs BTN's 3-bet range.</li>
+    <li><strong>A3s as a bluff</strong> — 3 Ace-blocker hands available (A3s-A5s).</li>
+    <li><strong>Minimal call OOP:</strong> JJ, TT, 99, AJs, ATs, KQs, JTs.</li>
+    <li><strong>Massive fold:</strong> 88 and below, A9s and below, KJs and below, connectors, AJo, AQo, KQo.</li></ul>`
+  },
+  { id:'vs3-sb', name:'SB vs 3-bet BB', cat:'Facing a 3-bet — OOP', type:'def', opener:'3-bet from BB',
+    act:[
+      {id:'vbet', lbl:'4-bet value', col:'#922b21',tc:'#fff', h:s('QQ KK AA AQs AKs AKo')},
+      {id:'bluff',lbl:'4-bet bluff',  col:'#e67e22',tc:'#fff', h:s('A2o A3o A4o A5o')},
+      {id:'call', lbl:'Call',         col:'#1e8449',tc:'#fff', h:s('JJ TT 99 88 AJs ATs KQs')},
+      {id:'fold', lbl:'Fold',         col:'#dce1e7',tc:'#8395a7',h:new Set()},
+    ],
+    xp:`<p><strong>SB raised, BB 3-bet. SB is OOP.</strong></p>
+    <ul><li><strong>SB raising range (reminder):</strong> 88+, ATs+, AJo+, KQs, KJo+, KQo + bluffs A2o-A5o, K7o-K9o, QTo, JTo.</li>
+    <li><strong>4-bet bluff = A2o-A5o</strong> — SB's bluff raises become 4-bet bluffs (Ace blocker, clean fold to a 5-bet).</li>
+    <li><strong>Limited call OOP:</strong> JJ, TT, 99, 88, AJs, ATs, KQs.</li>
+    <li><strong>Fold:</strong> KJo, KQo, AJo, AQo, K7o-K9o, QTo, JTo, T9o — all the marginal hands from SB's raising range.</li></ul>`
+  },
+
+  // ── FACING A 3-BET — IP ─────────────────────────────────────────────────────
+  { id:'vs3-co-ip', name:'CO vs 3-bet IP', cat:'Facing a 3-bet — IP', type:'def', opener:'3-bet from SB/BB',
+    act:[
+      {id:'vbet', lbl:'4-bet value', col:'#922b21',tc:'#fff', h:s('JJ QQ KK AA AQs AKs AKo')},
+      {id:'bluff',lbl:'4-bet bluff',  col:'#e67e22',tc:'#fff', h:s('A5s A4s A3s K4s')},
+      {id:'call', lbl:'Call',         col:'#1e8449',tc:'#fff', h:s('TT 99 88 77 AJs ATs A9s KQs KJs QJs JTs T9s 98s AQo AJo KQo')},
+      {id:'fold', lbl:'Fold',         col:'#dce1e7',tc:'#8395a7',h:new Set()},
+    ],
+    xp:`<p><strong>CO opened, SB or BB 3-bet. CO is IP post-flop.</strong></p>
+    <ul><li><strong>JJ moves to a 4-bet for value</strong> — IP, JJ wants a big pot vs a wide SB/BB.</li>
+    <li><strong>K4s added as a bluff</strong> — King blocker IP with a clean fold.</li>
+    <li><strong>Much wider call than OOP:</strong> TT-77, AJs-A9s, KQs-KJs, QJs, JTs, T9s, 98s, AQo, AJo, KQo.</li>
+    <li>Being IP post-flop offsets the disadvantage of playing a 3-bet pot with medium-strength hands.</li></ul>`
+  },
+  { id:'vs3-btn', name:'BTN vs 3-bet', cat:'Facing a 3-bet — IP', type:'def', opener:'3-bet from SB/BB',
+    act:[
+      {id:'vbet', lbl:'4-bet value', col:'#922b21',tc:'#fff', h:s('QQ KK AA AQs AKs AKo')},
+      {id:'bluff',lbl:'4-bet bluff',  col:'#e67e22',tc:'#fff', h:s('A5s A4s A3s K4s K3s')},
+      {id:'call', lbl:'Call',         col:'#1e8449',tc:'#fff', h:s('JJ TT 99 88 77 AJs ATs A9s KQs KJs QJs QTs JTs T9s 98s 87s 76s AQo AJo KQo')},
+      {id:'fold', lbl:'Fold',         col:'#dce1e7',tc:'#8395a7',h:new Set()},
+    ],
+    xp:`<p><strong>BTN opened (~48%), SB or BB 3-bet. BTN is still IP post-flop.</strong></p>
+    <ul><li><strong>Wide call IP:</strong> JJ-77, AJs-A9s, KQs-KJs, QJs-QTs, JTs-76s, AQo, AJo, KQo.</li>
+    <li><strong>Wider bluffs:</strong> K3s-K4s added — BTN opened very wide, more blockers available.</li>
+    <li><strong>Massive fold from BTN's wide range:</strong> 22-66, K2s-K9s, Q2s-Q9s, J4s-J9s, T5s-T9s, A2o-A9o, K5o-K9o…</li>
+    <li>Position IP justifies keeping suited connectors and medium pairs as calls.</li></ul>`
+  },
+];
+
+// ─── UTILS ───────────────────────────────────────────────────────────────────
+function getAction(hand, sc){
+  for(const a of sc.act) if(a.id!=='fold' && a.h.has(hand)) return a;
+  return sc.act.find(a=>a.id==='fold');
+}
+function combos(set){
+  let t=0;
+  for(const h of set){
+    if(h.length===2) t+=6;
+    else if(h.endsWith('s')) t+=4;
+    else t+=12;
+  }
+  return t;
+}
+
+// ─── SIDEBAR ─────────────────────────────────────────────────────────────────
+let cur=null, curTab='range';
+
+(function buildSidebar(){
+  const sb=document.getElementById('sidebar');
+  const cats={};
+  for(const sc of SC){if(!cats[sc.cat])cats[sc.cat]=[];cats[sc.cat].push(sc);}
+  for(const [cat,items] of Object.entries(cats)){
+    const g=document.createElement('div');g.className='grp';
+    g.innerHTML=`<div class="grp-title">${cat}</div>`;
+    for(const sc of items){
+      const el=document.createElement('div');
+      el.className='sc-item';el.textContent=sc.name;el.dataset.id=sc.id;
+      el.onclick=()=>select(sc.id);
+      g.appendChild(el);
+    }
+    sb.appendChild(g);
+  }
+})();
+
+const PT_MAP={'lj':'pt-lj','hj':'pt-hj','co':'pt-co','btn':'pt-btn','sb':'pt-sb','bb-sb-limp':'pt-bb'};
+
+function renderTable(){
+  const wrap=document.getElementById('ptable-section');
+  if(!cur||cur.cat!=='Opens'){wrap.style.display='none';return;}
+  wrap.style.display='block';
+  document.querySelectorAll('.pt-seat').forEach(el=>el.classList.remove('pt-active'));
+  const sid=PT_MAP[cur.id];
+  if(sid) document.getElementById(sid).classList.add('pt-active');
+}
+
+function select(id){
+  cur=SC.find(s=>s.id===id);
+  document.querySelectorAll('.sc-item').forEach(el=>el.classList.toggle('active',el.dataset.id===id));
+  document.getElementById('sc-title').textContent=cur.name+(cur.opener?' — vs '+cur.opener:'');
+  resetScore();
+  renderMatrix();renderLegend();renderExpl();renderTable();
+  if(curTab==='train') newHand();
+}
+
+// ─── TABS ─────────────────────────────────────────────────────────────────────
+function setTab(tab){
+  curTab=tab;
+  document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('on',i===(tab==='range'?0:1)));
+  document.getElementById('range').style.display=tab==='range'?'block':'none';
+  document.getElementById('train').style.display=tab==='train'?'block':'none';
+  if(tab==='train'&&cur) newHand();
+}
+
+// ─── MATRIX ──────────────────────────────────────────────────────────────────
+function renderMatrix(){
+  const el=document.getElementById('matrix');el.innerHTML='';
+  if(!cur)return;
+  const mk=(txt,cls='')=>{const d=document.createElement('div');d.className='cell'+(cls?' '+cls:'');d.textContent=txt;return d;};
+  el.appendChild(mk('','hdr'));
+  for(const r of RANKS) el.appendChild(mk(r,'hdr'));
+  for(let i=0;i<13;i++){
+    el.appendChild(mk(RANKS[i],'hdr'));
+    for(let j=0;j<13;j++){
+      const hand=hn(i,j),a=getAction(hand,cur);
+      const d=mk(hand);d.style.background=a.col;d.style.color=a.tc;
+      d.title=`${hand} → ${a.lbl}`;el.appendChild(d);
+    }
+  }
+}
+
+// ─── LEGEND ──────────────────────────────────────────────────────────────────
+function renderLegend(){
+  const lg=document.getElementById('legend');lg.innerHTML='';
+  if(!cur)return;
+  let totalActive=0;
+  for(const a of cur.act) if(a.id!=='fold') totalActive+=combos(a.h);
+  for(const a of cur.act){
+    const c=a.id==='fold'?1326-totalActive:combos(a.h);
+    const pct=(c/1326*100).toFixed(1);
+    const d=document.createElement('div');d.className='leg';
+    d.innerHTML=`<div class="leg-dot" style="background:${a.col};border:1px solid #ccc"></div><span><strong>${a.lbl}</strong> — ${c} combos (${pct}%)</span>`;
+    lg.appendChild(d);
+  }
+}
+
+// ─── EXPLANATION ─────────────────────────────────────────────────────────────
+function renderExpl(){
+  document.getElementById('expl-body').innerHTML=cur?cur.xp:'';
+}
+
+// ─── QUIZ ─────────────────────────────────────────────────────────────────────
+let ok=0,tot=0,streak=0,curHand=null,curAns=null,done=false;
+const SUITS=['♠','♥','♦','♣'];
+const SUIT_COL={'♠':'black','♥':'red','♦':'red','♣':'black'};
+const randSuit=()=>SUITS[Math.random()*4|0];
+const diffSuit=s=>SUITS.filter(x=>x!==s)[Math.random()*3|0];
+const diffColor=s=>(['♠','♣'].includes(s)?['♥','♦']:['♠','♣'])[Math.random()*2|0];
+
+function handCards(hand){
+  const r1=hand[0],r2=hand[1],t=hand[2];
+  let s1,s2;
+  if(!t){s1=randSuit();s2=diffSuit(s1);}
+  else if(t==='s'){s1=randSuit();s2=s1;}
+  else{s1=randSuit();s2=diffColor(s1);}
+  return [{r:r1,s:s1},{r:r2,s:s2}];
+}
+
+function cardHTML(c){
+  const cl=SUIT_COL[c.s]==='red'?'red':'black';
+  return `<div class="card ${cl}"><div class="ct">${c.r}<br>${c.s}</div><div class="cm">${c.s}</div><div class="cb">${c.r}<br>${c.s}</div></div>`;
+}
+
+function newHand(){
+  if(!cur)return;
+  done=false;
+  const onlyActive=document.getElementById('nonfold-only').checked;
+  if(onlyActive){
+    const pool=[];
+    for(let i=0;i<13;i++) for(let j=0;j<13;j++){
+      const h=hn(i,j);if(getAction(h,cur).id!=='fold') pool.push(h);
+    }
+    curHand=pool[Math.random()*pool.length|0];
+  } else {
+    curHand=hn(Math.random()*13|0,Math.random()*13|0);
+  }
+  curAns=getAction(curHand,cur);
+
+  const cards=handCards(curHand);
+  document.getElementById('hand').innerHTML=cards.map(cardHTML).join('');
+  document.getElementById('q-lbl').textContent=`Scenario: ${cur.name}${cur.opener?' — Opener: '+cur.opener:''}`;
+
+  const btns=document.getElementById('action-btns');btns.innerHTML='';
+  for(const a of cur.act){
+    const b=document.createElement('button');b.className='ab';
+    b.style.background=a.col;b.style.color=a.tc;b.textContent=a.lbl;
+    b.onclick=()=>check(a.id,b);btns.appendChild(b);
+  }
+  document.getElementById('fb').className='';
+  document.getElementById('fb').textContent='';
+  document.getElementById('next').disabled=true;
+}
+
+function check(id,btn){
+  if(done)return;done=true;tot++;
+  const correct=id===curAns.id;
+  if(correct){ok++;streak++;btn.classList.add('ok');}
+  else{
+    streak=0;btn.classList.add('bad');
+    document.querySelectorAll('.ab').forEach(b=>{if(b.textContent===curAns.lbl)b.classList.add('ok');});
+  }
+  document.querySelectorAll('.ab').forEach(b=>b.disabled=true);
+  const fb=document.getElementById('fb');
+  fb.className=correct?'ok':'bad';
+  fb.textContent=correct?`✓ Correct! ${curHand} → ${curAns.lbl}`:`✗ Incorrect. ${curHand} → ${curAns.lbl}`;
+  document.getElementById('next').disabled=false;
+  updateScore();
+}
+
+function updateScore(){
+  document.getElementById('s-ok').textContent=ok;
+  document.getElementById('s-tot').textContent=tot;
+  document.getElementById('s-pct').textContent=tot>0?Math.round(ok/tot*100)+'%':'—';
+  document.getElementById('s-str').textContent=streak+' 🔥';
+}
+
+function resetScore(){
+  ok=0;tot=0;streak=0;updateScore();
+  document.getElementById('fb').className='';
+  document.getElementById('fb').textContent='';
+}
+
+// ─── KEYBOARD ────────────────────────────────────────────────────────────────
+document.addEventListener('keydown',e=>{
+  if(curTab!=='train'||!cur)return;
+  if(e.key===' '||e.key==='Enter'){
+    e.preventDefault();
+    if(!document.getElementById('next').disabled) newHand();
+    return;
+  }
+  if(!done){
+    const n=parseInt(e.key);
+    if(n>=1&&n<=cur.act.length) document.querySelectorAll('.ab')[n-1]?.click();
+  }
+});
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+document.getElementById('range').style.display='block';
+document.getElementById('train').style.display='none';
+select('lj');
+</script>
+</body>
+</html>
